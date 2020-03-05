@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IQ Games</title>
+<style>
+    .box{
+        width:80px;
+        height: 80px;
+        background: url("https://gamemoji.s3-ap-northeast-1.amazonaws.com/gamemo.png") transparent;
+    }
+    .pos1{
+        top:20px !important;
+    }
+    .pos2{
+        top:110px !important;
+    }
+    .pos3{
+        top:200px !important;
+    }
+    .pos4{
+        top:290px !important;
+    }
+    .pos5{
+        top:380px !important;
+    }
+    .user-name{
+        text-align: center;
+    }
+    div.roaddesign{
+        background-color: #6cb36c;
+        border: 1px solid black;
+        height: 500px;
+        width: 100%;
+    }
+    div.start-line{
+        border-right: 1px solid red;
+        width: 150px;
+        height: 500px;
+    }
+    div.end-line{
+        border-left: 6px solid green;
+        height: 500px;
+        position: fixed;
+        top:9px;
+        right: 50px;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+
+</head>
+<body>
+    <div class="roaddesign">
+        <div class='player'></div>
+        <div class="start-line">
+        </div>
+        <div class="end-line">
+        </div>
+    </div>
+    Recent Winner Is:<%-recentwin%>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script>
+$(document).ready(function(){
+
+    let CreateUserList = `<%-JSON.stringify(CreateUserList)%>`;
+       let session_user = '<%-req.session.username%>'
+       CreateUserList = JSON.parse(CreateUserList);
+       let position = 1;
+       CreateUserList.forEach(user => {
+           if(session_user !== user.name){
+            $('.player').append(`<div id="${user.name}" class="box pos${position} ${user.name}" data-pos="${position}"><p class="user-name">${user.name}</p></div>`);
+        $("."+user.name).css({top: parseInt(user.position.posx), left: parseInt(user.position.posy), position:'absolute'});
+        position++;
+           }
+       });
+
+
+    let session = '<%-req.session.username%>';
+   
+   if(!session){
+    let session_name = prompt("Please enter your name:");
+    socket.emit('adduser',{user:session_name});
+    $.ajax({
+    url : "<%-base_url%>users/game",
+    type: "POST",
+    data : {session_name:session_name},
+    success: function(data, textStatus, jqXHR)
+    {
+        window.location.href = "<%-base_url%>users/game";
+    },
+    error: function (jqXHR, textStatus, errorThrown)
+    {
+ 
+    }
+});
+   }
+
+   if(session){
+    let socket = io('<%-socket_server_url%>');
+    socket.on('join_msg',function(data){
+        console.log(JSON.stringify(data),'cdc')
+    })
+    socket.on('positioncall',function(data){
+        let session_user = '<%-req.session.username%>';
+        if(session_user !== data.name){
+            let set_direction = data.action.go;
+            let digit = data.action.digit;
+            if(set_direction === 'left'){
+                $('.'+data.name).finish().animate({
+                left: digit
+                    });
+            }else if(set_direction === 'top'){
+                $('.'+data.name).finish().animate({
+                top: digit
+                    });
+            }
+        }
+    })
+    socket.emit('adduser',{user:session});
+   }
+   socket.on('newuser',function(data){
+       let newuserPostion = $(".player").find('.box').last().data('pos');
+       console.log(newuserPostion)
+       if(newuserPostion == undefined){
+        newuserPostion = 0;
+       }
+    if($(`#${data.user}`).length == 0){
+       $('.player').append(`<div id="${data.user}" class="box pos${newuserPostion+1} ${data.user}"  data-pos="${newuserPostion+1}"><p class="user-name">${data.user}</p></div>`);
+       $("."+data.user).css({top: parseInt(data.posx), left: parseInt(data.posy), position:'absolute'});
+       document.getElementById(data.user).scrollIntoView();
+    }
+   })
+   socket.on('wincallbroadcast',function(winner){
+       alert(`${winner} is Winner !`);
+       window.location.href = "<%-base_url%>users/game";
+   })
+
+})
+</script>
+<script>
+    let socket = io('<%-socket_server_url%>');
+    let session = '<%-req.session.username%>';
+    let boxclass = `.${session}`;
+        $(document).keydown(function(e){
+            let digit_transport = '50';
+            let question = quesions();
+            let ans;
+            switch (e.which){
+            case 37:    //left arrow key
+            break;
+                ans = prompt(`Please enter Answer of This Expression: ${question} =`);
+                ans = parseInt(ans);
+                if(ans === eval(question)){
+                    $(boxclass).finish().animate({
+                    left: "-="+digit_transport
+                });
+                socket.emit('clientcall', {action:{go:'left',digit:"-="+digit_transport},name:session});
+            }
+            break;
+                
+            case 38:    //up arrow key
+            break;
+                ans = prompt(`Please enter Answer of This Expression: ${question} =`);
+                ans = parseInt(ans)
+                if(ans === eval(question)){
+                $(boxclass).finish().animate({
+                    top: "-="+digit_transport
+                });
+                socket.emit('clientcall', {action:{go:'top',digit:"-="+digit_transport},name:session});
+                }
+                break;
+            case 39:    //right arrow key
+                ans = prompt(`Please enter Answer of This Expression: ${question} =`);
+                ans = parseInt(ans)
+                if(ans === eval(question)){
+                let result = $(boxclass).finish().animate({
+                    left: "+="+digit_transport
+                },{
+                    easing: 'swing',
+                    duration: 200,
+                    complete: function(){
+                        let offset = $(boxclass).offset();
+                        offset = parseInt(offset.left)
+                        if(offset>100){
+                            socket.emit('wincall',{name:session});
+                        }
+                    }
+                });
+                socket.emit('clientcall', {action:{go:'left',digit:"+="+digit_transport},name:session});
+                }
+                break;
+            case 40:    //bottom arrow key
+            break;
+                ans = prompt(`Please enter Answer of This Expression: ${question} =`);
+                ans = parseInt(ans)
+                if(ans === eval(question)){
+                $(boxclass).finish().animate({
+                    top: "+="+digit_transport
+                });
+                socket.emit('clientcall', {action:{go:'top',digit:"+="+digit_transport},name:session});
+                }
+                break;
+            }
+        });
+        </script>
+        <script>
+        function quesions(){
+            let min = 0;
+            let max = 9;
+            let a = parseInt(Math.random() * (max - min) + min);
+            let b = parseInt(Math.random() * (max - min) + min);
+            Array.prototype.random = function (length) {
+                return this[Math.floor((Math.random()*length))];
+            }
+            var randomArray = ['+','-','*'];
+            var math_operator = randomArray.random(randomArray.length);
+            let que = a + math_operator + b;
+            
+            return que;
+        }
+        </script>
+</html>                            

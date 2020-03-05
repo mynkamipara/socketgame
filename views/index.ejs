@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+    <style>
+    .online{
+      color:white;
+      background-color: green;
+    }
+    .offline{
+      color:white;
+      background-color: red;
+    }
+    .typing{
+      color:white;
+      background-color: orange;
+    }
+    </style>
+  </head>
+  <body>
+    <h1>Status:</h1>
+    <div id="onstatus"></div>
+    <p>Welcome to cricket Board</p>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <h1>Live Score:</h1>
+    <p style="color:red" id="run"><%-run%></p>
+    
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+
+<script>
+  $(function () {
+    var socket = io('<%-socket_server_url%>');
+    $('form').submit(function(e){
+      e.preventDefault(); // prevents page reloading
+      socket.emit('chat message', $('#m').val());
+      $('#m').val('');
+      return false;
+    });
+    socket.on('chat message', function(msg){
+      console.log(msg)
+      $('p#run').html(msg)
+    });
+    socket.on('onStatus', function(data){
+      console.log(data)
+     if(data.status ==1){
+        class_name ='online';
+     }else if(data.status ==0){
+      class_name ='offline';
+     }else if(data.status ==3){
+      class_name ='typing';
+     }
+      if($('#on_off').length>0){
+        $('#on_off').html(`<p id="on_off" class="${class_name}">${data.msg}</P>`)
+      }else{
+        $('#onstatus').append(`<p id="on_off" class="${class_name}">${data.msg}</P>`)
+      }
+    });
+  });
+  
+</script>
+
+
+</html>

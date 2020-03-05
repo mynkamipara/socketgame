@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <p>Welcome to Football Score board</p>
+    <form action="">
+      <input id="msg_text" autocomplete="off" /><button>Send</button>
+    </form>
+    <h1>Live Score:</h1>
+    <p style="color:red" id="run"><%-run%></p>
+    
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+     let socket = io('<%-socket_server_url%>');
+  $(window).focus(function(e) {
+        socket.emit('online',{msg:'football is online',status:1});
+  });
+  $(window).load(function(e) {
+        socket.emit('online',{msg:'football is online',status:1});
+  });
+  $(window).blur(function(e) {
+    socket.emit('offline',{msg:'football is offline',status:0});
+  });
+$("#msg_text").on('change keydown paste input', function(){
+     let text_len = $('#msg_text').val();
+     if(text_len.length == 0){
+        socket.emit('online',{msg:'football is online',status:1});
+        return;
+     }
+     socket.emit('typing',{msg:'football is typing',status:3});
+});
+</script>
+
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <p>Chat board (YOU:<%-req.session.username%>)</p>
+    <%let user_count =0%>
+    <ul class="nav nav-tabs" id="userlist">
+    <%userlist.forEach((username)=>{%>
+        <%if(req.session.username !== username){%>
+            <li class="<%-(user_count == 0)?'active':''%>"><a data-toggle="tab" href="javascript:void(0)" data-user="<%-username%>"><%-username%></a></li>
+            <%user_count++%>
+        <%}%>
+    <%})%>
+</ul>
+   
+         
+      <input id="msg_text" name="msg" autocomplete="off" />
+      <input type="hidden" name="username" id="receiver" value="<%-userlist[0]%>">
+      <button>Send</button>
+
+    <div>
+      <h3>messages:</h3>
+      <%userlist.forEach((username)=>{%>
+            <div class="msg_text_<%-username%>"></div>
+    <%})%>
+      
+    </div>
+
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+    $('#userlist').find('li').on('click',function(){
+        let receiver = $(this).find('a').data('user');
+        $('#receiver').val(receiver);
+    })
+  
+  
+    let socket = io('<%-socket_server_url%>');
+
+
+
+  let session_user = "<%-req.session.username%>"
+
+
+
+socket.on('send',function(msg){
+  console.log('receive private msg'+msg);
+  if(msg.sendto === session_user){
+    if(msg.sendfrom === session_user){
+        msgHtml = `<p class="text-right">${msg.sendfrom}:${msg.msg}:${msg.sendto}</p>`;
+    }else{
+      msgHtml = `<p class="text-left">${msg.sendfrom}:${msg.msg}:${msg.sendto}</p>`
+    }
+    $('.msg_text_'+msg.sendto).append(msgHtml)
+  }
+})
+
+
+
+
+
+$('button').on('click',function(data){
+  let username = $("input[name='username']").val();
+  let msg = $("input[name='msg']").val();
+  $("input[name='msg']").val('');
+  let sender = '<%-req.session.username%>'
+  socket.emit('send_private_msg',{sendfrom:sender,sendto:username,msg:msg});
+})
+</script>
+
+<script>
+$(document).ready(function(){
+    let send_to_user = $('ul')
+})
+</script>
+
+</html>
